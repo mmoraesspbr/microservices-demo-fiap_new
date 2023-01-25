@@ -7,12 +7,42 @@ services:
         volumes:
           - ./prometheus.yml:/etc/prometheus/prometheus.yml
         command:
+          test-alerts-weave-cloud
           - '-config.file=/etc/prometheus/prometheus.yml'
           - '-storage.local.path=/prometheus'
+          - '--config.file=/etc/prometheus/prometheus.yml'
+          - '--storage.tsdb.path=/prometheus'
+          - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+          - '--web.console.templates=/usr/share/prometheus/consoles'
+        master
         expose:
           - 9090
         ports:
           - 9090:9090
+        test-alerts-weave-cloud
+        links:
+          - alertmanager:alertmanager
+    nodeexporter:
+        image: quay.io/prometheus/node-exporter:v1.1.2
+        container_name: nodeexporter
+        volumes:
+          - '/:/host:ro,rslave'
+        pid: host
+        command:
+          - '--path.rootfs=/host'
+        restart: unless-stopped
+        ports:
+          - 9100:9100
+    alertmanager:
+        image: prom/alertmanager
+        ports:
+          - 9093:9093
+        volumes:
+          - ./alertmanager.yml:/etc/alertmanager/config.yml
+        command:
+          - '--config.file=/etc/alertmanager/config.yml'
+          - '--storage.path=/alertmanager'
+    master
     grafana:
         image: grafana/grafana
         depends_on:
@@ -22,3 +52,15 @@ services:
         environment:
           - GF_SECURITY_ADMIN_PASSWORD=foobar
           - GF_USERS_ALLOW_SIGN_UP=false
+        links:
+          - prometheus:prometheus
+    importer:
+      image: giantswarm/tiny-tools
+      depends_on:
+        - grafana
+      entrypoint: /bin/sh import.sh
+      working_dir: /opt/grafana-import-dashboards
+      volumes:
+        - ./grafana:/opt/grafana-import-dashboards
+      links:
+        - grafana:grafana
