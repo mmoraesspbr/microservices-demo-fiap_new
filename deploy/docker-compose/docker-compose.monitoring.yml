@@ -6,16 +6,20 @@ services:
         container_name: prometheus
         volumes:
           - ./prometheus.yml:/etc/prometheus/prometheus.yml
-          - ./alert.rules:/etc/prometheus/alert.rules
         command:
+          test-alerts-weave-cloud
+          - '-config.file=/etc/prometheus/prometheus.yml'
+          - '-storage.local.path=/prometheus'
           - '--config.file=/etc/prometheus/prometheus.yml'
           - '--storage.tsdb.path=/prometheus'
           - '--web.console.libraries=/usr/share/prometheus/console_libraries'
           - '--web.console.templates=/usr/share/prometheus/consoles'
+        master
         expose:
           - 9090
         ports:
           - 9090:9090
+        test-alerts-weave-cloud
         links:
           - alertmanager:alertmanager
     nodeexporter:
@@ -38,6 +42,7 @@ services:
         command:
           - '--config.file=/etc/alertmanager/config.yml'
           - '--storage.path=/alertmanager'
+    master
     grafana:
         image: grafana/grafana
         depends_on:
